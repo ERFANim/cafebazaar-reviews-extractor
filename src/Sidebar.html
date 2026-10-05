@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    body{font:13px Arial,sans-serif;color:#202124;margin:0;padding:16px;background:#f8f9fa}h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:20px 0 10px}.card{background:#fff;border:1px solid #dadce0;border-radius:8px;padding:12px;margin-bottom:10px}.name{font-weight:700;font-size:14px}.muted{color:#5f6368;font-size:12px;word-break:break-all}.meta{margin:8px 0;line-height:1.55}.status{font-weight:700}label{display:block;margin:9px 0 4px}input{box-sizing:border-box;width:100%;padding:8px;border:1px solid #bdc1c6;border-radius:4px}button{border:0;border-radius:4px;background:#1a73e8;color:#fff;padding:8px 12px;cursor:pointer}button:disabled{opacity:.55;cursor:default}.message{display:none;padding:9px;margin:10px 0;border-radius:4px;white-space:pre-wrap}.ok{display:block;background:#e6f4ea;color:#137333}.error{display:block;background:#fce8e6;color:#c5221f}.loading{display:block;background:#e8f0fe;color:#1967d2}.empty{color:#5f6368}.errorText{color:#c5221f;font-size:12px;margin-top:5px}
+  </style>
+</head>
+<body>
+  <h2>Configured apps</h2>
+  <div id="message" class="message"></div>
+  <div id="apps"><span class="empty">Loading…</span></div>
+  <h3>Add App</h3>
+  <div class="card">
+    <label for="appName">App Name</label><input id="appName" autocomplete="off">
+    <label for="packageName">Package Name</label><input id="packageName" autocomplete="off" placeholder="com.example.app">
+    <label for="importFromDate">Import From Date</label><input id="importFromDate" type="date">
+    <div style="margin-top:12px"><button id="addButton" onclick="addApp()">Add &amp; Import</button></div>
+  </div>
+<script>
+  var busy=false;
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function setBusy(value,text){busy=value;document.querySelectorAll('button').forEach(function(b){b.disabled=value});if(text)showMessage(text,'loading')}
+  function showMessage(text,type){var el=document.getElementById('message');el.textContent=text;el.className='message '+type}
+  function fail(error){setBusy(false);showMessage(error&&error.message?error.message:String(error),'error');loadApps()}
+  function loadFail(error){setBusy(false);showMessage(error&&error.message?error.message:String(error),'error');document.getElementById('apps').innerHTML='<span class="empty">Unable to load app metadata.</span>'}
+  function success(result){setBusy(false);var counts=result||{};var detail=counts.rowsRemoved!=null?' Removed: '+counts.rowsRemoved+', preserved: '+counts.rowsPreserved+'.':' Pages: '+(counts.pagesFetched||0)+', new: '+(counts.newReviews||0)+', updated: '+(counts.updatedReviews||0)+'.';showMessage((counts.message||'Done.')+detail,'ok');loadApps()}
+  function loadApps(){google.script.run.withSuccessHandler(renderApps).withFailureHandler(loadFail).uiGetApps()}
+  function renderApps(apps){
+    var root=document.getElementById('apps');
+    if(!apps.length){root.innerHTML='<span class="empty">No apps configured.</span>';return}
+    root.innerHTML=apps.map(function(a){
+      var action='';
+      if(a.status==='PAUSED'&&a.operation_type==='SYNC'){action='<button onclick="repairSync(\''+esc(a.package_name)+'\')">Cancel Sync &amp; Repair</button> <button onclick="continueOp(\''+esc(a.package_name)+'\')">Continue Sync</button>'}
+      else if(a.operation_type){action='<button onclick="continueOp(\''+esc(a.package_name)+'\')">'+(a.status==='ERROR'?'Retry':(a.operation_type==='HISTORY'?'Continue Import':'Continue Sync'))+'</button>'}
+      else if(a.status==='READY'){action='<button onclick="syncApp(\''+esc(a.package_name)+'\')">Sync New Reviews</button>'}
+      var extend=a.status==='READY'&&!a.operation_type?'<label for="extend-'+esc(a.sheet_id)+'">Import From Date</label><input id="extend-'+esc(a.sheet_id)+'" type="date" value="'+esc(a.import_from_date)+'"><div style="margin-top:9px"><button onclick="extendHistory(\''+esc(a.package_name)+'\','+a.sheet_id+')">Extend History</button></div>':'';
+      return '<div class="card"><div class="name">'+esc(a.app_name)+'</div><div class="muted">'+esc(a.package_name)+'</div><div class="meta">Sheet: '+esc(a.sheet_name)+'<br>Imported from: '+esc(a.import_from_date)+'<br>Imported until: '+esc(a.imported_until_date||'—')+'<br>Status: <span class="status">'+esc(a.status)+'</span><br>Last sync: '+esc(a.last_sync_at||'—')+'</div>'+(a.last_error?'<div class="errorText">'+esc(a.last_error)+'</div>':'')+'<div style="margin-top:9px">'+action+'</div>'+extend+'</div>'
+    }).join('');document.querySelectorAll('button').forEach(function(b){b.disabled=busy})
+  }
+  function addApp(){if(busy)return;var payload={appName:document.getElementById('appName').value,packageName:document.getElementById('packageName').value,importFromDate:document.getElementById('importFromDate').value};setBusy(true,'Adding app and importing reviews…');google.script.run.withSuccessHandler(success).withFailureHandler(fail).uiAddApp(payload)}
+  function continueOp(pkg){if(busy)return;setBusy(true,'Continuing saved operation…');google.script.run.withSuccessHandler(success).withFailureHandler(fail).uiContinueOperation(pkg)}
+  function syncApp(pkg){if(busy)return;setBusy(true,'Syncing newest reviews…');google.script.run.withSuccessHandler(success).withFailureHandler(fail).uiSyncNewReviews(pkg)}
+  function extendHistory(pkg,id){if(busy)return;var date=document.getElementById('extend-'+id).value;setBusy(true,'Importing older reviews…');google.script.run.withSuccessHandler(success).withFailureHandler(fail).uiExtendHistory(pkg,date)}
+  function repairSync(pkg){if(busy)return;if(!confirm('This will cancel the paused sync and remove reviews older than the current Import From Date. Reviews inside the configured date range will be preserved. Continue?'))return;setBusy(true,'Repairing out-of-range reviews…');google.script.run.withSuccessHandler(success).withFailureHandler(fail).uiCancelSyncAndRepair(pkg)}
+  loadApps();
+</script>
+</body>
+</html>

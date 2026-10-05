@@ -1,0 +1,12 @@
+{
+  "properties": { "statusCode": 200, "errorMessage": "" },
+  "singleReply": {
+    "reviewReply": {
+      "reviews": [
+        { "id": 123456, "user": "Sample User", "comment": "Sample review", "likes": 2, "total": 2, "rate": 5, "versionCode": 1, "date": "2026/10/04", "reply": null, "accountID": "fake-account-id", "avatarURL": "https://example.test/avatar.png", "userRepliesCount": 0, "isEdited": false },
+        { "id": 123455, "user": "Another Sample User", "comment": "Another sample review", "likes": 1, "total": 1, "rate": 4, "versionCode": 1, "date": "2026/10/03", "reply": { "comment": "Sample developer reply" }, "accountID": "another-fake-account-id", "avatarURL": "", "userRepliesCount": 1, "isEdited": true }
+      ],
+      "nextPageCursor": "FAKE_NEXT_PAGE_CURSOR"
+    }
+  }
+}

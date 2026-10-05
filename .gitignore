@@ -1,0 +1,14 @@
+.clasp.json
+node_modules/
+.DS_Store
+npm-debug.log*
+
+.env
+.env.*
+!.env.example
+coverage/
+.nyc_output/
+.vscode/
+.idea/
+Thumbs.db
+*.log
