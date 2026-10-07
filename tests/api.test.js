@@ -39,3 +39,11 @@ test('missing reviewReply and reviews array are rejected', () => {
   assert.throws(() => api.parseApiResponse(200, JSON.stringify({ properties: { statusCode: 200 }, singleReply: {} })), /missing reviewReply/);
   assert.throws(() => api.parseApiResponse(200, JSON.stringify({ properties: { statusCode: 200 }, singleReply: { reviewReply: {} } })), /missing reviews array/);
 });
+
+test('opaque cursors are not coerced from non-string values', () => {
+  assert.throws(() => api.buildRequestBody('com.example.app', 123), /cursor must be a string/);
+  const response = { properties: { statusCode: 200 }, singleReply: { reviewReply: {
+    reviews: [], nextPageCursor: 123
+  } } };
+  assert.throws(() => api.parseApiResponse(200, JSON.stringify(response)), /invalid nextPageCursor/);
+});

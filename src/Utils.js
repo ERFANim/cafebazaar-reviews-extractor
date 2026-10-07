@@ -26,6 +26,15 @@ function cbrString(value) {
   return value == null ? '' : String(value);
 }
 
+function cbrCafeBazaarSourceUrl(packageName) {
+  return CBR_CONFIG.CAFEBAZAAR_APP_URL_PREFIX + packageName;
+}
+
+function cbrStoreDisplayName(store) {
+  var labels = { cafebazaar: 'CafeBazaar', myket: 'Myket', sibapp: 'SibApp' };
+  return Object.prototype.hasOwnProperty.call(labels, store) ? labels[store] : store;
+}
+
 function cbrReviewId(value) {
   if (value == null || String(value).trim() === '') throw new Error('Review is missing id.');
   return String(value);
@@ -53,7 +62,7 @@ function cbrReviewToRow(review, fetchedAt) {
     cbrReplyValue(review.reply), review.isEdited === true,
     cbrString(review.accountID), cbrString(review.avatarURL),
     review.userRepliesCount == null ? '' : review.userRepliesCount,
-    fetchedAt, cbrSafeJson(review)
+    fetchedAt, cbrSafeJson(Object.prototype.hasOwnProperty.call(review, 'rawReview') ? review.rawReview : review)
   ];
 }
 
@@ -106,6 +115,7 @@ function cbrPublicError(error) {
 
 if (typeof module !== 'undefined') module.exports = {
   normalizeDate: cbrNormalizeDate,
+  cafeBazaarSourceUrl: cbrCafeBazaarSourceUrl,
   reviewId: cbrReviewId,
   reviewToRow: cbrReviewToRow,
   historyPageDecision: cbrHistoryPageDecision,

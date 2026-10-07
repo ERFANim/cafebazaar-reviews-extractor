@@ -1,16 +1,16 @@
-function cbrRunHistory(app, initialCursor) {
+function cbrRunHistory(app, initialCursor, provider) {
   var sheet = cbrResolveAppSheet(app);
-  var index = cbrLoadReviewIndex(sheet);
+  var reviewState = cbrLoadReviewState(sheet);
   var cursor = cbrString(initialCursor);
   var startedAt = Date.now();
   var counts = { newReviews: 0, updatedReviews: 0, processedReviews: 0, pagesFetched: 0 };
   var oldestImported = app.imported_until_date || '';
   while (true) {
     var currentPageCursor = cursor;
-    var page = cbrFetchReviewPage(app.package_name, cursor);
+    var page = provider.fetchReviewPage(app, cursor);
     counts.pagesFetched++;
-    var decision = cbrHistoryPageDecision(page.reviews, app.import_from_date, page.nextPageCursor);
-    var writeCounts = cbrUpsertReviews(sheet, decision.accepted, index, cbrNowIso());
+    var decision = cbrHistoryPageDecision(page.reviews, app.import_from_date, page.nextCursor);
+    var writeCounts = cbrUpsertReviews(sheet, decision.accepted, reviewState, cbrNowIso());
     counts.newReviews += writeCounts.newCount;
     counts.updatedReviews += writeCounts.updatedCount;
     counts.processedReviews += page.reviews.length;
@@ -18,9 +18,12 @@ function cbrRunHistory(app, initialCursor) {
       var date = cbrNormalizeDate(decision.accepted[i].date);
       if (!oldestImported || date < oldestImported) oldestImported = date;
     }
+    var coverage = cbrCoverageFromState(reviewState);
     cbrUpdateApp(app.package_name, {
       operation_cursor: decision.nextCursor,
       imported_until_date: oldestImported,
+      coverage_from_date: coverage.oldest,
+      coverage_to_date: coverage.newest,
       status: CBR_CONFIG.STATUS.RUNNING,
       last_error: ''
     });
